@@ -45,11 +45,18 @@ export async function createRendererServer(rendererRoot: string) {
         return
       }
 
-      const data = await fs.readFile(resolved)
-      res.setHeader("Content-Type", contentType(resolved))
-      res.setHeader("Cache-Control", "no-store")
-      res.writeHead(200)
-      res.end(data)
+      const read = async (filePath: string) => {
+        const data = await fs.readFile(filePath)
+        res.setHeader("Content-Type", contentType(filePath))
+        res.setHeader("Cache-Control", "no-store")
+        res.writeHead(200)
+        res.end(data)
+      }
+
+      // 资源文件优先按路径命中；否则回退到 SPA 的 index.html
+      await read(resolved).catch(async () => {
+        await read(path.join(root, "index.html"))
+      })
     } catch {
       res.writeHead(404)
       res.end("Not Found")
@@ -68,4 +75,3 @@ export async function createRendererServer(rendererRoot: string) {
       }),
   }
 }
-

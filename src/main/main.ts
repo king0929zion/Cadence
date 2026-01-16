@@ -159,6 +159,40 @@ async function restartEventStream() {
   })
 }
 
+function findRendererRoot(): string {
+  const candidates = [
+    // dev/prod (when main.cjs lives in dist/)
+    path.join(__dirname, "renderer"),
+    // when __dirname is app root
+    path.join(__dirname, "dist", "renderer"),
+    // packaged: app.asar is app path
+    path.join(app.getAppPath(), "dist", "renderer"),
+    path.join(app.getAppPath(), "renderer"),
+    // packaged: explicit app.asar in resources
+    path.join(process.resourcesPath, "app.asar", "dist", "renderer"),
+    path.join(process.resourcesPath, "app.asar", "renderer"),
+  ]
+
+  for (const dir of candidates) {
+    try {
+      if (fs.existsSync(path.join(dir, "index.html"))) return dir
+    } catch {
+      // ignore
+    }
+  }
+
+  throw new Error(
+    [
+      "未找到 renderer 产物（index.html）。",
+      `__dirname=${__dirname}`,
+      `app.getAppPath()=${app.getAppPath()}`,
+      `process.resourcesPath=${process.resourcesPath}`,
+      "已尝试：",
+      ...candidates.map((c) => `- ${c}`),
+    ].join("\n"),
+  )
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1100,
@@ -175,16 +209,23 @@ function createWindow() {
   const devUrl = process.env.VITE_DEV_SERVER_URL
   if (devUrl) win.loadURL(devUrl)
   else {
-    const rendererRoot = path.join(__dirname, "renderer")
+    const rendererRoot = findRendererRoot()
     createRendererServer(rendererRoot)
       .then((srv) => {
         rendererServer = srv
         return win!.loadURL(srv.url)
       })
       .catch((e) => {
-        // 兜底：如果本地静态服务失败，再尝试直接 file:// 加载
-        win?.webContents.send("cadence:error", { message: e instanceof Error ? e.message : String(e) })
-        win?.loadFile(path.join(__dirname, "renderer", "index.html"))
+        const msg = e instanceof Error ? e.message : String(e)
+        // 兜底：显示错误页（比 Not Found/空白更可定位）
+        const html = `<!doctype html><meta charset="utf-8"><title>Cadence 启动失败</title>
+<body style="font-family:ui-sans-serif,system-ui; padding:16px; white-space:pre-wrap; background:#f5f1e8; color:#1f1f1f">
+<h2>Cadence 渲染层加载失败</h2>
+<p>请将以下内容发给开发者：</p>
+<pre>${msg.replace(/</g, "&lt;")}</pre>
+<p>你也可以设置环境变量 <code>CADENCE_DEBUG=1</code> 再启动以自动打开 DevTools。</p>
+</body>`
+        win?.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html))
       })
   }
 
