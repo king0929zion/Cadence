@@ -4,6 +4,7 @@ import fs from "node:fs"
 import fsp from "node:fs/promises"
 import { OpencodeServerManager } from "./opencode-server"
 import { OpencodeHttpClient } from "./opencode-http"
+import { createRendererServer } from "./renderer-server"
 
 type ModelRef = { providerID: string; modelID: string }
 
@@ -75,6 +76,7 @@ let settings: Settings
 let client: OpencodeHttpClient | undefined
 let server: OpencodeServerManager | undefined
 let eventsAbort: AbortController | undefined
+let rendererServer: Awaited<ReturnType<typeof createRendererServer>> | undefined
 
 const pendingPermissions = new Map<string, { permission: string; always: string[] }>()
 let opencodeSessionHooked = false
@@ -172,7 +174,19 @@ function createWindow() {
   // 默认先加载 Cadence 壳（便于展示错误/设置）；随后可切到 OpenCode 完整 UI
   const devUrl = process.env.VITE_DEV_SERVER_URL
   if (devUrl) win.loadURL(devUrl)
-  else win.loadFile(path.join(__dirname, "renderer", "index.html"))
+  else {
+    const rendererRoot = path.join(__dirname, "renderer")
+    createRendererServer(rendererRoot)
+      .then((srv) => {
+        rendererServer = srv
+        return win!.loadURL(srv.url)
+      })
+      .catch((e) => {
+        // 兜底：如果本地静态服务失败，再尝试直接 file:// 加载
+        win?.webContents.send("cadence:error", { message: e instanceof Error ? e.message : String(e) })
+        win?.loadFile(path.join(__dirname, "renderer", "index.html"))
+      })
+  }
 
   win.on("close", (e) => {
     if (tray && !(app as any).isQuiting) {
@@ -180,6 +194,14 @@ function createWindow() {
       win?.hide()
     }
   })
+
+  win.webContents.on("did-fail-load", (_event, code, desc, validatedURL) => {
+    win?.webContents.send("cadence:error", { message: `页面加载失败(${code}): ${desc} (${validatedURL})` })
+  })
+  win.webContents.on("render-process-gone", (_event, details) => {
+    win?.webContents.send("cadence:error", { message: `渲染进程崩溃: ${details.reason}` })
+  })
+  if (process.env.CADENCE_DEBUG === "1") win.webContents.openDevTools({ mode: "detach" })
 }
 
 function ensureOpencodeHeaderHook(session: Electron.Session, baseUrl: string) {
@@ -481,4 +503,5 @@ app.on("window-all-closed", () => {
 app.on("before-quit", async () => {
   eventsAbort?.abort()
   await server?.stop()
+  await rendererServer?.close().catch(() => {})
 })
