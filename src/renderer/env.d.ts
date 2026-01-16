@@ -43,6 +43,9 @@ declare global {
       ui: {
         openOpencode(): Promise<boolean>
       }
+      opencode: {
+        install(): Promise<{ version: string; exePath: string }>
+      }
       onEvent(cb: (event: any) => void): () => void
       onError(cb: (err: { message: string }) => void): () => void
     }

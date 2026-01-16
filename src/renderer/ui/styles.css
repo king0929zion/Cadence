@@ -264,9 +264,13 @@ body {
   flex-wrap: wrap;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .switch {
   display: flex;
   gap: 10px;
   align-items: center;
 }
-

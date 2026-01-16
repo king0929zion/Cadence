@@ -46,6 +46,9 @@ contextBridge.exposeInMainWorld("cadence", {
   ui: {
     openOpencode: () => ipcRenderer.invoke("cadence:ui:open-opencode"),
   },
+  opencode: {
+    install: () => ipcRenderer.invoke("cadence:opencode:install"),
+  },
   onEvent: (cb: (event: any) => void) => {
     const handler = (_: any, event: any) => cb(event)
     ipcRenderer.on("cadence:event", handler)

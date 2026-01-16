@@ -11,7 +11,10 @@ export class OpencodeServerManager {
   #info: OpencodeServerInfo | undefined
   #starting: Promise<OpencodeServerInfo> | undefined
 
-  constructor(private readonly opencodeRoot: string) {}
+  constructor(
+    private readonly opencodeRoot: string | undefined,
+    private readonly opencodeExePath?: string,
+  ) {}
 
   get info() {
     return this.#info
@@ -21,18 +24,23 @@ export class OpencodeServerManager {
     if (this.#info) return this.#info
     if (this.#starting) return this.#starting
 
-    const opencodeCwd = path.join(this.opencodeRoot, "packages", "opencode")
+    const opencodeCwd = this.opencodeRoot ? path.join(this.opencodeRoot, "packages", "opencode") : ""
 
     this.#starting = new Promise<OpencodeServerInfo>((resolve, reject) => {
-      const child = spawn(
-        process.env.BUN || "bun",
-        ["run", "src/index.ts", "serve", "--hostname", "127.0.0.1", "--port", "0"],
-        {
+      const child = (() => {
+        if (this.opencodeExePath) {
+          return spawn(this.opencodeExePath, ["serve", "--hostname", "127.0.0.1", "--port", "0"], {
+            cwd: process.cwd(),
+            stdio: ["ignore", "pipe", "pipe"],
+            env: { ...process.env },
+          })
+        }
+        return spawn(process.env.BUN || "bun", ["run", "src/index.ts", "serve", "--hostname", "127.0.0.1", "--port", "0"], {
           cwd: opencodeCwd,
           stdio: ["ignore", "pipe", "pipe"],
           env: { ...process.env },
-        },
-      )
+        })
+      })()
 
       this.#child = child
 

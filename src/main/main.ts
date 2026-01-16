@@ -5,6 +5,7 @@ import fsp from "node:fs/promises"
 import { OpencodeServerManager } from "./opencode-server"
 import { OpencodeHttpClient } from "./opencode-http"
 import { createRendererServer } from "./renderer-server"
+import { ensureOpencodeInstalled } from "./opencode-installer"
 
 type ModelRef = { providerID: string; modelID: string }
 
@@ -104,16 +105,31 @@ async function ensureServerReady() {
     client.setDirectory(settings.directory)
     return info
   } catch (e) {
-    // 打包产物里通常不会带 opencode；自动模式失败时自动回退到 attach
-    const baseUrl = settings.serverUrl.replace(/\/+$/, "")
-    if (!client) client = new OpencodeHttpClient(baseUrl, settings.directory)
-    else client.setBaseUrl(baseUrl)
-    client.setDirectory(settings.directory)
-    win?.webContents.send("cadence:error", {
-      message:
-        "自动启动 opencode 失败，已回退为“连接已有服务”。原因：" + (e instanceof Error ? e.message : String(e)),
-    })
-    return { baseUrl, opencodeCwd: "" }
+    // 自动模式失败：尝试自动安装 Windows opencode CLI，再启动本地 serve
+    try {
+      const installed = await ensureOpencodeInstalled(app.getPath("userData"))
+      server = new OpencodeServerManager(undefined, installed.exePath)
+      const info = await server.start()
+      if (!client) client = new OpencodeHttpClient(info.baseUrl, settings.directory)
+      else client.setBaseUrl(info.baseUrl)
+      client.setDirectory(settings.directory)
+      win?.webContents.send("cadence:error", { message: `已自动安装并启动 opencode(${installed.version})：${info.baseUrl}` })
+      return info
+    } catch (installErr) {
+      // 最终兜底：回退到 attach
+      const baseUrl = settings.serverUrl.replace(/\/+$/, "")
+      if (!client) client = new OpencodeHttpClient(baseUrl, settings.directory)
+      else client.setBaseUrl(baseUrl)
+      client.setDirectory(settings.directory)
+      win?.webContents.send("cadence:error", {
+        message:
+          "自动启动/安装 opencode 失败，已回退为“连接已有服务”。原因：" +
+          (e instanceof Error ? e.message : String(e)) +
+          "\n安装错误：" +
+          (installErr instanceof Error ? installErr.message : String(installErr)),
+      })
+      return { baseUrl, opencodeCwd: "" }
+    }
   }
 }
 
@@ -431,6 +447,11 @@ app.whenReady().then(async () => {
   ipcMain.handle("cadence:ui:open-opencode", async () => {
     await openOpencodeUIInNewWindow()
     return true
+  })
+
+  ipcMain.handle("cadence:opencode:install", async () => {
+    const installed = await ensureOpencodeInstalled(app.getPath("userData"))
+    return installed
   })
 
   ipcMain.handle("cadence:sessions:list", async () => {

@@ -45,6 +45,7 @@ export function App() {
   const [agents, setAgents] = createSignal<any[]>([])
   const [providers, setProviders] = createSignal<any[]>([])
   const [permissionReq, setPermissionReq] = createSignal<PermissionRequest | undefined>()
+  const [installing, setInstalling] = createSignal(false)
 
   const filteredSessions = createMemo(() => {
     const q = query().trim().toLowerCase()
@@ -251,6 +252,10 @@ export function App() {
     const next = await window.cadence.settings.set(draftSettings())
     setSettings(next)
     setShowSettings(false)
+
+    if (draftSettings().uiMode === "opencode") {
+      void window.cadence.ui.openOpencode()
+    }
   }
 
   async function respondPermission(response: "once" | "always" | "reject") {
@@ -465,6 +470,23 @@ export function App() {
                 }}
               >
                 打开 OpenCode 完整界面
+              </button>
+              <button
+                class="btn"
+                disabled={installing()}
+                onClick={async () => {
+                  try {
+                    setInstalling(true)
+                    const r = await window.cadence.opencode.install()
+                    setError(`opencode 已安装：${r.version} (${r.exePath})`)
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : String(e))
+                  } finally {
+                    setInstalling(false)
+                  }
+                }}
+              >
+                {installing() ? "正在安装 opencode…" : "安装/更新 opencode（Windows）"}
               </button>
               <button class="btn ghost" onClick={() => setShowSettings(false)}>
                 取消
