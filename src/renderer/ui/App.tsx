@@ -286,6 +286,26 @@ export function App() {
 
   return (
     <div class="app">
+      <Show when={typeof window.cadence === "undefined"}>
+        <div class="modalBackdrop">
+          <div class="modal">
+            <div class="modalTitle">预加载脚本未注入</div>
+            <div class="hint">
+              当前窗口没有检测到 `window.cadence`，通常表示 `preload.cjs` 未正确加载（打包路径/配置错误）。
+            </div>
+            <div class="modalActions">
+              <button
+                class="btn primary"
+                onClick={() => {
+                  location.reload()
+                }}
+              >
+                重新加载
+              </button>
+            </div>
+          </div>
+        </div>
+      </Show>
       <div class="sidebar">
         <div class="brand">
           <div class="title">Cadence</div>

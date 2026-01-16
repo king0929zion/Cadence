@@ -209,7 +209,47 @@ function findRendererRoot(): string {
   )
 }
 
+function findPreloadPath(): string {
+  const candidates = [
+    path.join(__dirname, "preload.cjs"),
+    path.join(__dirname, "dist", "preload.cjs"),
+    path.join(app.getAppPath(), "dist", "preload.cjs"),
+    path.join(app.getAppPath(), "preload.cjs"),
+    path.join(process.resourcesPath, "app.asar", "dist", "preload.cjs"),
+    path.join(process.resourcesPath, "app.asar", "preload.cjs"),
+  ]
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return p
+    } catch {
+      // ignore
+    }
+  }
+
+  throw new Error(
+    [
+      "未找到 preload 脚本（preload.cjs）。",
+      `__dirname=${__dirname}`,
+      `app.getAppPath()=${app.getAppPath()}`,
+      `process.resourcesPath=${process.resourcesPath}`,
+      "已尝试：",
+      ...candidates.map((c) => `- ${c}`),
+    ].join("\n"),
+  )
+}
+
 function createWindow() {
+  const preloadPath = (() => {
+    try {
+      return findPreloadPath()
+    } catch (e) {
+      // preload 缺失会导致 window.cadence 不存在；先返回一个默认值，让页面能显示错误页
+      win?.webContents.send("cadence:error", { message: e instanceof Error ? e.message : String(e) })
+      return path.join(__dirname, "preload.cjs")
+    }
+  })()
+
   win = new BrowserWindow({
     width: 1100,
     height: 720,
@@ -217,7 +257,7 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: preloadPath,
     },
   })
 
