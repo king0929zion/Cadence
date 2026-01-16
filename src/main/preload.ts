@@ -8,6 +8,7 @@ type Settings = {
   agent?: string
   serverMode: "auto" | "attach"
   serverUrl: string
+  uiMode: "cadence" | "opencode"
   autoLaunch: boolean
   hotkey: string
 }
@@ -41,6 +42,9 @@ contextBridge.exposeInMainWorld("cadence", {
   dialog: {
     save: (input: { title: string; defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
       ipcRenderer.invoke("cadence:dialog:save", input),
+  },
+  ui: {
+    openOpencode: () => ipcRenderer.invoke("cadence:ui:open-opencode"),
   },
   onEvent: (cb: (event: any) => void) => {
     const handler = (_: any, event: any) => cb(event)

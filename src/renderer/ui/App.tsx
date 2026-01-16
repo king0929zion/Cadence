@@ -21,12 +21,14 @@ export function App() {
     agent?: string
     serverMode: "auto" | "attach"
     serverUrl: string
+    uiMode: "cadence" | "opencode"
     autoLaunch: boolean
     hotkey: string
   }>({
     directory: "",
     serverMode: "auto",
     serverUrl: "http://127.0.0.1:4096",
+    uiMode: "cadence",
     autoLaunch: false,
     hotkey: "Control+Alt+Space",
   })
@@ -368,6 +370,18 @@ export function App() {
             </div>
 
             <div class="row">
+              <div class="label">界面</div>
+              <select
+                class="field"
+                value={draftSettings().uiMode}
+                onChange={(e) => setDraftSettings({ ...draftSettings(), uiMode: e.currentTarget.value as any })}
+              >
+                <option value="cadence">Cadence 极简界面</option>
+                <option value="opencode">OpenCode 完整界面（新窗口）</option>
+              </select>
+            </div>
+
+            <div class="row">
               <div class="label">服务端</div>
               <select
                 class="field"
@@ -444,6 +458,14 @@ export function App() {
             </div>
 
             <div class="modalActions">
+              <button
+                class="btn"
+                onClick={() => {
+                  void window.cadence.ui.openOpencode()
+                }}
+              >
+                打开 OpenCode 完整界面
+              </button>
               <button class="btn ghost" onClick={() => setShowSettings(false)}>
                 取消
               </button>

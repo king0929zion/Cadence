@@ -4,3 +4,4 @@ release
 .DS_Store
 src/main/*.cjs
 src/main/*.map
+package-lock.json

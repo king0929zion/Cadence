@@ -5,9 +5,9 @@ import path from "node:path"
 export default defineConfig({
   plugins: [solid()],
   root: path.resolve(import.meta.dirname),
+  base: "./",
   build: {
     outDir: "dist/renderer",
     emptyOutDir: true,
   },
 })
-

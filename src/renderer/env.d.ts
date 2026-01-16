@@ -7,6 +7,7 @@ type Settings = {
   agent?: string
   serverMode: "auto" | "attach"
   serverUrl: string
+  uiMode: "cadence" | "opencode"
   autoLaunch: boolean
   hotkey: string
 }
@@ -38,6 +39,9 @@ declare global {
           defaultPath?: string
           filters?: Array<{ name: string; extensions: string[] }>
         }): Promise<{ canceled: boolean; filePath?: string }>
+      }
+      ui: {
+        openOpencode(): Promise<boolean>
       }
       onEvent(cb: (event: any) => void): () => void
       onError(cb: (err: { message: string }) => void): () => void

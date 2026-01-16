@@ -13,6 +13,7 @@ type Settings = {
   agent?: string
   serverMode: "auto" | "attach"
   serverUrl: string
+  uiMode: "cadence" | "opencode"
   autoLaunch: boolean
   hotkey: string
   permissionMemory: Record<string, string[]>
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
   directory: process.cwd(),
   serverMode: "auto",
   serverUrl: "http://127.0.0.1:4096",
+  uiMode: "cadence",
   autoLaunch: false,
   hotkey: "Control+Alt+Space",
   permissionMemory: {},
@@ -75,6 +77,8 @@ let server: OpencodeServerManager | undefined
 let eventsAbort: AbortController | undefined
 
 const pendingPermissions = new Map<string, { permission: string; always: string[] }>()
+let opencodeSessionHooked = false
+let opencodeDirectoryHeader = ""
 
 function getClient(): OpencodeHttpClient {
   if (!client) throw new Error("OpenCode 服务未就绪")
@@ -165,6 +169,7 @@ function createWindow() {
     },
   })
 
+  // 默认先加载 Cadence 壳（便于展示错误/设置）；随后可切到 OpenCode 完整 UI
   const devUrl = process.env.VITE_DEV_SERVER_URL
   if (devUrl) win.loadURL(devUrl)
   else win.loadFile(path.join(__dirname, "renderer", "index.html"))
@@ -175,6 +180,45 @@ function createWindow() {
       win?.hide()
     }
   })
+}
+
+function ensureOpencodeHeaderHook(session: Electron.Session, baseUrl: string) {
+  if (opencodeSessionHooked) return
+  opencodeSessionHooked = true
+
+  const origin = new URL(baseUrl).origin
+  session.webRequest.onBeforeSendHeaders({ urls: [`${origin}/*`] }, (details, callback) => {
+    if (opencodeDirectoryHeader) {
+      details.requestHeaders["x-opencode-directory"] = opencodeDirectoryHeader
+    }
+    callback({ requestHeaders: details.requestHeaders })
+  })
+}
+
+async function openOpencodeUIInNewWindow() {
+  const info = await ensureServerReady()
+  const baseUrl = info.baseUrl.replace(/\/+$/, "")
+
+  const dir = settings.directory
+  const isNonASCII = /[^\x00-\x7F]/.test(dir)
+  opencodeDirectoryHeader = isNonASCII ? encodeURIComponent(dir) : dir
+
+  const opWin = new BrowserWindow({
+    width: 1200,
+    height: 780,
+    backgroundColor: "#111111",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      // 使用独立 partition，避免和 Cadence 设置页互相影响
+      partition: "persist:opencode",
+    },
+  })
+
+  ensureOpencodeHeaderHook(opWin.webContents.session, baseUrl)
+  await opWin.loadURL(baseUrl + "/")
+  opWin.show()
+  opWin.focus()
 }
 
 function ensureTray() {
@@ -271,6 +315,12 @@ app.whenReady().then(async () => {
     win?.webContents.send("cadence:error", { message: e instanceof Error ? e.message : String(e) })
   }
 
+  if (settings.uiMode === "opencode") {
+    openOpencodeUIInNewWindow().catch((e) => {
+      win?.webContents.send("cadence:error", { message: e instanceof Error ? e.message : String(e) })
+    })
+  }
+
   ipcMain.handle("cadence:ready", async () => {
     const info = await ensureServerReady()
     await restartEventStream()
@@ -310,6 +360,11 @@ app.whenReady().then(async () => {
 
     const { permissionMemory: _pm, ...publicSettings } = settings
     return publicSettings
+  })
+
+  ipcMain.handle("cadence:ui:open-opencode", async () => {
+    await openOpencodeUIInNewWindow()
+    return true
   })
 
   ipcMain.handle("cadence:sessions:list", async () => {
