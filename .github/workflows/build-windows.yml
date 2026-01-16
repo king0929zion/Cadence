@@ -37,6 +37,13 @@ jobs:
             ~\.bun\install\cache
           key: bun-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
 
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\npm-cache
+          key: npm-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+
       - name: Cache electron-builder
         uses: actions/cache@v4
         with:
@@ -45,8 +52,8 @@ jobs:
             ~\AppData\Local\electron\Cache
           key: electron-builder-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
 
-      - name: Install (no lockfile)
-        run: bun install --no-save --backend=copyfile --no-progress
+      - name: Install
+        run: npm install --cache "$env:LOCALAPPDATA\\npm-cache"
 
       - name: Build
         run: bun run build
