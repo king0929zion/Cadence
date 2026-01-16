@@ -46,7 +46,7 @@ jobs:
           key: electron-builder-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
 
       - name: Install (no lockfile)
-        run: bun install --no-save
+        run: bun install --no-save --backend=copyfile --no-progress
 
       - name: Build
         run: bun run build
