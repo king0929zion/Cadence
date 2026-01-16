@@ -15,7 +15,6 @@ jobs:
     defaults:
       run:
         shell: pwsh
-        working-directory: cadence
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,14 +34,14 @@ jobs:
         with:
           path: |
             ~\.bun\install\cache
-          key: bun-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+          key: bun-${{ runner.os }}-${{ hashFiles('package.json') }}
 
       - name: Cache npm
         uses: actions/cache@v4
         with:
           path: |
             ~\AppData\Local\npm-cache
-          key: npm-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+          key: npm-${{ runner.os }}-${{ hashFiles('package.json') }}
 
       - name: Cache electron-builder
         uses: actions/cache@v4
@@ -50,7 +49,7 @@ jobs:
           path: |
             ~\AppData\Local\electron-builder\Cache
             ~\AppData\Local\electron\Cache
-          key: electron-builder-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('package.json') }}
 
       - name: Install
         run: npm install --cache "$env:LOCALAPPDATA\\npm-cache"
@@ -66,4 +65,4 @@ jobs:
         with:
           name: cadence-windows
           path: |
-            cadence/release/**
+            release/**
