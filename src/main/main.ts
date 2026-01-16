@@ -226,6 +226,9 @@ function createWindow() {
 <p>你也可以设置环境变量 <code>CADENCE_DEBUG=1</code> 再启动以自动打开 DevTools。</p>
 </body>`
         win?.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html))
+
+        // 兜底：即使 Cadence 壳失败，也尽量提供 OpenCode 完整 GUI
+        openOpencodeUIInNewWindow().catch(() => {})
       })
   }
 
