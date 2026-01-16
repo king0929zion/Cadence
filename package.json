@@ -9,8 +9,8 @@
     "dev": "bun run scripts/dev.ts",
     "build": "bun run scripts/build.ts",
     "start": "bun run scripts/start.ts",
-    "dist:win": "bun run build && bunx electron-builder --win nsis",
-    "dist:win:msi": "bun run build && bunx electron-builder --win msi",
+    "dist:win": "bun run build && bunx electron-builder --win nsis --publish never",
+    "dist:win:msi": "bun run build && bunx electron-builder --win msi --publish never",
     "watch:gha": "bun run scripts/watch-actions.ts"
   },
   "description": "极简风格的 OpenCode AI 助手桌面客户端",
