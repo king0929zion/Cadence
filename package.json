@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "cadence",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "dev": "bun run scripts/dev.ts",
+    "build": "bun run scripts/build.ts",
+    "start": "bun run scripts/start.ts",
+    "dist:win": "bun run build && bunx electron-builder --win nsis",
+    "dist:win:msi": "bun run build && bunx electron-builder --win msi",
+    "watch:gha": "bun run scripts/watch-actions.ts"
+  },
+  "description": "极简风格的 OpenCode AI 助手桌面客户端",
+  "author": "Cadence",
+  "dependencies": {
+    "solid-js": "^1.9.10"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.8.2",
+    "vite": "^7.1.4",
+    "vite-plugin-solid": "^2.11.10"
+  },
+  "build": {
+    "appId": "ai.opencode.cadence",
+    "productName": "Cadence",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "dist/main.cjs"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+name: build-windows
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "**"
+  pull_request:
+    paths:
+      - "**"
+
+jobs:
+  cadence-win:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: cadence
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.6"
+
+      - name: Cache Bun
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.bun\install\cache
+          key: bun-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+
+      - name: Cache electron-builder
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron-builder\Cache
+            ~\AppData\Local\electron\Cache
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('cadence/package.json') }}
+
+      - name: Install (no lockfile)
+        run: bun install --no-save
+
+      - name: Build
+        run: bun run build
+
+      - name: Package (NSIS/MSI)
+        run: bun run dist:win
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cadence-windows
+          path: |
+            cadence/release/**
